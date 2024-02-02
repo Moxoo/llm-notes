@@ -1,10 +1,25 @@
-本文是对近期llm的入门学习总结，也是想帮助其他刚接触llm的新手玩家，快速入门。本文只涉及模型处理流程中的算法和模型架构，不涉及模型的应用。
+前一段时间，接触板端部署大语言模型，对于大模型几乎0基础的我，不得不一边了解板端部署的方法让模型能快速跑起来，同时一边学习llm的一些基本理论知识来理解为什么这样可以跑起来，以及在遇到问题时可以很好的解决而不是误打误撞。  
+
+如果你也是llm新手玩家，那么可以参考本文来理解一些基本的知识，比如如何为模型分词、什么是词嵌入、什么是位置编码、什么是transformer、什么是self-attention自注意力机制......  
+
+同时，本文在部分章节，会结合llama2的具体模型架构来展开介绍。
 
 # 1 需要学习的零件
-- tokenization，使用Tokenizer将连续的文本序列转换为离散的token
-- embedding，本质是一个查找表。首先将词汇表映射到一个'd'维的特征空间，然后通过token对应的index来查找'd'维词向量，每个维代表一个词特征
+transformer框架是大语言模型的基础，transformer以一些列的token作为输入，流经多层encoder、多层decoder以及一些适当的归一化和softmax后，输出下一个token。 
+
+![Arch](img/arch.webp)  
+
+从上图transformer的结构可见，transformer可以分成2部分，左encoder和右decoder，而llama架构只用了tranformer的decoder部分，是decoder-only架构，或者说目前大部分生成式的语言模型都是采用这种decoder-only架构。  
+llama和llama2在模型架构上基本一致，llama2架构如上图右半部分，llama2架构共用了32(N*)个Decoder层。llama2与原始transformer中decoder的不同主要在于：
+1. 将transformer中的LayerNorm换成了RMSNorm
+2. 将transformer中的self-attention自注意力机制中的多头注意力Multi-Head Attention换成了GQA(Grouped Multi-Query Attention)
+3. 将embedding层后的位置编码Positional Encoding换成了Rotaty Positional Embedding，即RoPE，并将其作用于self-attention阶段  
+
+本文将transformer架构以及其输入输出拆分为多个零件进行讲解：
+- tokenization，使用Tokenizer将连续的文本序列转换为离散的token，作为transformer嵌入embedding层的输入
+- embedding，本质是一个查找表。首先将词汇表映射到一个'd'维的特征空间，然后通过输入的token对应的index来查找'd'维词向量，每个维度代表一个词特征
 - position encoding，模型需要词的位置信息，就像人类阅读文本，需要获取上下文关系，因此需要一种编码把token的位置信息传递给模型
-- transformer，把'embedding'和'position encoding'以某种方式整合后，作为transformer的input，经过一些列的'Layer Norm','Self-Attention','MLP'和'Softmax'...后为词汇表中的每个词生成一个分数(该词是下一个输出token的概率)。这些分数有一个特殊的名称：'logits'，可以通过直接取最大值和采样的方法输出最终的token
+- transformer-decoder，把'embedding'和'position encoding'以某种方式整合后，经过一些列的'Layer Norm','Self-Attention','MLP'和'Softmax'...后为词汇表中的每个词生成一个分数(每个词是下一个输出token的概率)。这些分数有一个特殊的名称：'logits'，可以通过直接取最大值和采样的方法输出最终的token
 
 # 2 分词器Tokenizer
 ![Tokenize](img/Tokenizer.jpg)
@@ -247,5 +262,5 @@ W_0是最小频率，j=0和j=d_model分别可以得到最大频率1和最小频�
 推导比较麻烦，暂时不介绍。  
 性能很好，据我所知，主流的模型，比如llama架构，Qwen，GPT等都是使用的RoPE。
 
-# Transformer
+# 5 transformer-decoder
 开始正式进入深水区...
