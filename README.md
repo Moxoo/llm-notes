@@ -267,3 +267,24 @@ W_0是最小频率，j=0和j=d_model分别可以得到最大频率1和最小频�
 这一章会结合一个小规模(85000参数量)的模型，nano-gpt，来过一遍transformer和核心的decoder层，nano-gpt的架构如下图所示：  
 ![nano-gpt_1](img/transfm_1.jpg)  
 从一个简单的例子展开，输入一个六个字母的序列“C B A B B C”，按字母顺序对它们进行排序，即输出“A B B B C C”。  
+
+简单起见，将每个字母视为一个token，则模型的词汇表是：  
+![nano-gpt_1](img/transfm_2.png)  
+
+那么可以得到一个token index的序列：2 1 0 1 1 2，输入序列长度T为6。  
+![nano-gpt_1](img/transfm_3.png)  
+
+该模型的词嵌入层的嵌入参数是一个n_vocab*C的矩阵Token_Embed，n_vocab是词表大小，在本例中只有“A B C”三个，所以词表大小为3，C是嵌入层维度，本例为48维。  
+
+根据之前章节说的，嵌入层的本质是查表，所以根据每个token的index从Token_Embed中取出相应的词向量，得到一个6*48的词向量矩阵。  
+
+然后将词嵌入矩阵与对应的6*48的位置编码参数矩阵Position Embedding逐元素相加，得到最终的输入input embedding矩阵，矩阵的形状是T*C，也即6*48：  
+![nano-gpt_1](img/transfm_4.png)  
+
+随后 Input Embed 流经模型，经过一系列称为transformer的层，然后得到一个输出output  
+![nano-gpt_1](img/transfm_5.png)  
+
+得到的output就是下一个token的预测，即下一个token为‘A’、‘B’或‘C’的概率。  
+
+## 5.1 Layer Norm
+层归一化
