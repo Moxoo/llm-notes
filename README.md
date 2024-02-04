@@ -263,4 +263,7 @@ W_0是最小频率，j=0和j=d_model分别可以得到最大频率1和最小频�
 性能很好，据我所知，主流的模型，比如llama架构，Qwen，GPT等都是使用的RoPE。
 
 # 5 transformer-decoder
-开始正式进入深水区...
+开始正式进入深水区...  
+这一章会结合一个小规模(85000参数量)的模型，nano-gpt，来过一遍transformer和核心的decoder层，nano-gpt的架构如下图所示：  
+![nano-gpt_1](img/transfm_1.jpg)  
+从一个简单的例子展开，输入一个六个字母的序列“C B A B B C”，按字母顺序对它们进行排序，即输出“A B B B C C”。  
