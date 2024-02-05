@@ -286,5 +286,94 @@ W_0是最小频率，j=0和j=d_model分别可以得到最大频率1和最小频�
 
 得到的output就是下一个token的预测，即下一个token为‘A’、‘B’或‘C’的概率。  
 
-## 5.1 Layer Norm
-层归一化
+## 5.1 Layer Norm层归一化
+layer normalization——层归一化。transformer每层操作的第一步就是对input embedding矩阵每一个词向量进行归一化操作。归一化是深度神经网络训练中的重要步骤，有助于提高模型在训练过程中的稳定性。  
+以第四个词向量为例，也就是input embedding矩阵转置后的第4列。  
+![nano-gpt_1](img/transfm_6.png)  
+
+归一化的目标是让每一列的均值为0,标准差为1。为此，要先找到该列的（均值 mean(μ) 和标准差 dev(σ)）。下图t为3(下标从0开始，3意味着是第4列)的目标均值mean(μ)为0,标准差dev(σ)为0.04,图中的符号E[x]表示列的均值，Var[x]表示列的方差(标准差的平方)。ε = 1×10-5，作用是防止除零。像这样依次类推把每一列的均值和标准差计算出来并存储在聚合层中。  
+![nano-gpt_1](img/transfm_7.png)  
+
+计算完每一列的均值和标准差后，将列中的每个元素然减去该列的均值并除以该列的标准差，得到列的每一个归一化值。最后将每一个归一化值乘以学习权重 (γ)，然后加上偏置 (β) ，从而得到最终归一化值。  
+![nano-gpt_1](img/transfm_8.png)  
+
+同样的方式，对input embedding矩阵的每一列进行上述归一化操作，得到归一化的normalized input embedding，准备好传递给transformer中最重要的一个部分——Self-Attention自注意力层。  
+![nano-gpt_1](img/transfm_9.png)  
+
+## 5.2 Self-Attention自注意力
+![nano-gpt_1](img/transfm_10.png)  
+自注意力机制是基于Transformer的大语言模型的核心。这可以看作是input embedding矩阵中的列相互“对话”的过程。到目前为止，以及在所有其他阶段，列都可以被视为独立的单元。每列代表了输入句子中的一个最小单元，其中蕴含了高维度的词特征(词与词之间在语义上的关系)和其在句子中的位置关系(词与词之间在位置上的远近)。  
+
+![nano-gpt_1](img/transfm_11.png)  
+自注意力层由多个头(上图中有3个)组成，每个头的操作是一样的，差别在于参数权重不一样，所以这里只针对单个头进行拆解。  
+
+### 5.2.1 单个注意力头的计算方法
+![nano-gpt_1](img/transfm_12.png)  
+每个自注意力头的第一步是从归一化input embedding矩阵中为T(输入token的数量)列中的每一列生成三个向量：Q(Query vector)、K(Key vector) 和 V(Value vector)。  
+
+![nano-gpt_1](img/transfm_13.png)  
+从上图可以看出，单个Q向量中的每个元素都是通过Q-weught参数矩阵的每一行和归一化input embedding矩阵中的每一列做向量点积后，再加上偏置Q-bias中的一个元素计算出来的。  
+举例说明：t=3，a=15时，取Q-weught的第16个行向量，与归一化input embedding的第4个列向量做点积，然后加上Q-bias中第16个元素，对于该Q向量的每个元素，则可通过用Q-weught每个行向量分别与input embedding的第4个列向量做点积然后再加上对应的Q-bias值后得出。  
+
+这样的操作，可以确保每个计算出的元素都能受到输入向量中所有元素的影响(其中影响的效果由模型的权重参数决定)。  
+
+![nano-gpt_1](img/transfm_14.png)  
+以同样的方式计算其他输出元素，得到其他的Q、K、V向量,然后将这些向来分别拼接成Q、K、V矩阵。  
+
+
+随后开始计算Self-Attention的输出：
+1. 计算Attention Matrix权重矩阵。首先，使用Q和K的列向量做点积操作，得到Attention矩阵。Attention是一个尺寸为(输入序列长度T×输入序列长度T)的矩阵，且是一个下三角矩阵，对角线下方有数据，上方都是0。计算方式举例：
+    - 第1行
+        - Attention矩阵下标为[0,0]的元素计算方法：取Q矩阵的第1列 与 K矩阵的第1列 做点积操作
+    - 第2行
+        - Attention矩阵下标为[1,0]的元素计算方法：取Q矩阵的第2列 与 K矩阵的第1列 做点积操作
+        - Attention矩阵下标为[1,1]的元素计算方法：取Q矩阵的第2列 与 K矩阵的第2列 做点积操作
+    - 第3行
+        - Attention矩阵下标为[2,0]的元素计算方法：取Q矩阵的第3列 与 K矩阵的第1列 做点积操作
+        - Attention矩阵下标为[2,1]的元素计算方法：取Q矩阵的第3列 与 K矩阵的第2列 做点积操作
+        - Attention矩阵下标为[2,2]的元素计算方法：取Q矩阵的第3列 与 K矩阵的第3列 做点积操作
+    - 第T行 
+        - Attention矩阵下标为[T-1,0]的元素计算方法：取Q矩阵的第T列 与 K矩阵的第1列 做点积操作
+        - ...
+        - Attention矩阵下标为[T-1,T-1]的元素计算方法：取Q矩阵的第T列 与 K矩阵的第T列 做点积操作  
+    
+    (注：以上这些点积操作是测量两个向量之间相似性的一种方法。如果它们非常相似，则点积将会很大。如果它们差异很大，则点积将会很小或为负值)
+
+    这种计算方式叫做Causal self-attention，确保序列中某个位置的输出仅基于先前位置的已知输出权重，而不是基于未来位置的权重。也就是说，这样能确保对每个下一个单词的预测仅取决于前面的单词。为了在类似 GPT 的 LLM 中实现这一点，对于当前处理的每个token，可以直接屏蔽mask掉未来的所有token，这些token位于输入文本中当前正在处理的token之后。  
+
+    下图例子，直观的说明了Causal mask如何应用于self-attention权重以隐藏输入中的未来输入token:  
+
+    ![nano-gpt_1](img/transfm_15.webp) 
+    左边的部分是一个6×6的attention矩阵，代表attention权重。在类似 GPT 的LLM中，模型从左到右一次性读取并生成一个token。如果有一个像“Life is short eat desert first”这样的文本样本，可以有以下步骤，其中箭头右侧单词的上下文向量应该只包含其自身和前面的单词：
+    - "Life" → "is"
+    - "Life is" → "short"
+    - "Life is short" → "eat"
+    - "Life is short eat" → "desert"
+    - "Life is short eat desert" → "first"
+
+    实现上述步骤的最简单方法是通过对attention权重矩阵对角线上方的元素应用掩码来屏蔽所有未来的token，如下图所示。这样，在创建上下文向量时将不会包含“未来”单词：  
+    ![nano-gpt_1](img/transfm_16.webp)  
+
+    在代码实现层面上，可以使用一个只有0和1的下三角causal attention mask矩阵来与完整的attention输出权重矩阵逐元素向乘，得到最终的下三角权重矩阵：  
+    ![nano-gpt_1](img/transfm_17.png)  
+    ![nano-gpt_1](img/transfm_18.webp)  
+
+2. 归一化，使用softmax对第一步得到的Attention Matrix权重矩阵的每一行进行归一化，得到Attn Matrix Softmax。(后面会着重介绍softmax,使用某种方法把每一行都被标准化为总和为 1)
+3. 最后，将目前还没用到的V矩阵以某种方式与Attn Matrix Softmax做运算，得到最后的注意力层的输出：V-Output。以V-Output的第6个列向量的计算方法为例介绍V-Output的计算方式：
+    - 取V矩阵的前6列，取Attn Matrix Softmax的第6行(由于是下三角，所以该行只有前6个元素是非0值)
+    ![nano-gpt_1](img/transfm_19.png)  
+    - 分别使用这6个非0元素与这6个列响亮向乘，得到6个新的向量
+    ![nano-gpt_1](img/transfm_20.png) 
+    - 然后将这6个新的向量逐元素相加，得到一个新的向量，作为输出V-Output的第6列
+    ![nano-gpt_1](img/transfm_21.png) 
+    - 依次类推，可以计算出完整的V-Output矩阵
+    ![nano-gpt_1](img/transfm_22.png)  
+
+### 5.2.2 多头注意力
+多个注意力头以同样的计算方式来分别得出一个V-Output，区别在于每个头使用的权重参数不一样  
+
+![nano-gpt_1](img/transfm_23.png) 
+
+### 5.2.3 总结
+self-attention自注意力机制的主要目标是：每一列都希望从其他列中得到相关信息。为了达到这个目标，通过将每个Q向量与其他列的所有K向量进行比较来实现。  
+此外，使用Causal mask使模型不能查看未来的权重。
