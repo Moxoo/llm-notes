@@ -371,9 +371,49 @@ layer normalization——层归一化。transformer每层操作的第一步就�
 
 ### 5.2.2 多头注意力
 多个注意力头以同样的计算方式来分别得出一个V-Output，区别在于每个头使用的权重参数不一样  
+![nano-gpt_1](img/transfm_23.png)  
 
-![nano-gpt_1](img/transfm_23.png) 
+### 5.2.3 Projection投影和Residual残差连接
+每个自注意力头分别得出一个V-Output后，把多个V-Output向量上下叠加起来，如下图有3个自注意力头的输出V-Output矩阵，每个矩阵是16行，叠加后变成48行，可以发现与上述的嵌入层维度C一样都是48  
+![nano-gpt_1](img/proj_1.png)  
 
-### 5.2.3 总结
+然后，对这个48行的大V-Output矩阵的每个列向量进行简单的矩阵向量乘法，然后再加上偏置，就可以得到整个自注意力层的输出Attention Output。具体计算如下：使用C×C的Proj的参数矩阵 与 C×T的大V-Output矩阵 做矩阵乘法，且Proj的行向量与大V-Output的列向量做点积时，要加上对应行数的偏置值，该结果作为Attention Output的矩阵元素值。  
+![nano-gpt_1](img/proj_2.png)  
+
+有了自注意力层的输出Attention Output后，这之后并不是直接将其传递到下一阶段，而是逐元素将和嵌入层矩阵(input embedding)相加，得到Attention Residual矩阵。这个过程称为残差连接(residual connection):  
+![nano-gpt_1](img/proj_3.png)  
+
+与层归一化一样，残差连接对于在深度神经网络中实现有效学习非常重要。现在有了自注意力的最终结果，可以将其传递到transformer的下一部分：前馈网络feed-forward。
+
+### 5.2.4 总结
 self-attention自注意力机制的主要目标是：每一列都希望从其他列中得到相关信息。为了达到这个目标，通过将每个Q向量与其他列的所有K向量进行比较来实现。  
 此外，使用Causal mask使模型不能查看未来的权重。
+
+## 5.3 MLP多层感知机
+![nano-gpt_1](img/mlp_1.jpg)  
+
+在自注意力层之后，transformer的下半部分是 MLP（multi-layer perceptron），实质是一个简单的两层神经网络:  
+![nano-gpt_1](img/mlp_2.jpg) 
+
+在自注意力层的输出矩阵Attention Residual进入MLP层之前首先执行一次层归一化：  
+![nano-gpt_1](img/mlp_3.jpg)  
+
+然后，进入MLP层，处理归一化后的C×T矩阵。具体步骤为，对每个长度为C的列向量进行(以下MLP Bias和MLP Weights矩阵参与计算时需先转置)：
+1. 带有偏置的线性变换，得到一个长度为4×C的列向量:  
+    ![nano-gpt_1](img/mlp_4.jpg)  
+    4×C的列向量的每一个元素的计算方法为：MLP权重参数矩阵中的对应的长度为C行向量 与 Attention输出矩阵的列向量 做点积操作后再加上对应行的偏置值  
+
+2. 对这个长度为4×C的列向量逐元素使用 GELU 激活函数:  
+    ![nano-gpt_1](img/mlp_5.jpg)  
+    这是为了在模型中引入一些非线性，这是任何神经网络的关键步骤。GELU看起来很像ReLU,但具有比ReLu更平滑的曲线而不是尖角  
+    ![nano-gpt_1](img/mlp_6.png)  
+
+3. 带有偏置的线性变换，将激活后的长度为4×C的列向量再转换为长度为C的列向量
+   ![nano-gpt_1](img/mlp_7.jpg)  
+
+4. 再进行一次残差连接
+    ![nano-gpt_1](img/mlp_8.jpg)
+
+这样，最终得到了一个长度为C的MLP列向量。用同样的方法处理注意力层输出的每一个列向量，就可得到最终的MLP层的输出：MLP Residual。MLP Residual的尺寸与transformer的输入input embedding矩阵一样，C行(模型的词嵌入维度)，T列(模型输入的Token数)。  
+
+MLP层就结束了，到目前为止，已经的得了transformer第一个block的输出，然后将其传递到下一个block中，如此循环N(取决与模型的架构)个block后，就可以得到transformer的最终输出。对于深度学习来说，一般前面的block往往专注于学习较低级别的特征和模式，而后面的block则学习识别和理解更高级别的抽象和关系。在自然语言处理NLP的背景下，较低层的block可能学习语法、句法和简单的单词关联，而较高层的block可能捕获更复杂的语义关系、话语结构和上下文相关的含义。
