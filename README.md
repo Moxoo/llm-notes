@@ -2,7 +2,29 @@
 
 如果你也是llm新手玩家，那么可以参考本文来理解一些基本的知识，比如如何为模型分词、什么是词嵌入、什么是位置编码、什么是transformer、什么是self-attention自注意力机制......  
 
-同时，本文在部分章节，会结合llama2的具体模型架构来展开介绍。
+同时，本文在部分章节，会结合llama2的具体模型架构来展开介绍。  
+
+把参考文献写在最前面：  
+- Tokenize
+    - https://towardsdatascience.com/byte-pair-encoding-subword-based-tokenization-algorithm-77828a70bee0
+    - https://blog.csdn.net/qq_52852138/article/details/129127164
+    - https://towardsdatascience.com/byte-pair-encoding-subword-based-tokenization-algorithm-77828a70bee0
+    - https://zhuanlan.zhihu.com/p/631463712 
+    - https://zhuanlan.zhihu.com/p/191648421
+- Embedding
+    - https://spaces.ac.cn/archives/4122
+    - https://zhuanlan.zhihu.com/p/631463712 
+- position encoding
+    - https://kazemnejad.com/blog/transformer_architecture_positional_encoding/
+    - https://zhuanlan.zhihu.com/p/454482273
+    - https://towardsdatascience.com/master-positional-encoding-part-i-63c05d90a0c3
+    - https://kexue.fm/archives/8265
+    - https://kexue.fm/archives/8130 
+- transformer-decoder
+    - https://zhuanlan.zhihu.com/p/651248009
+    - https://ai.plainenglish.io/understanding-llama2-kv-cache-grouped-query-attention-rotary-embedding-and-more-c17e5f49a6d7
+    - https://towardsdatascience.com/build-and-play-your-own-v-l-model-equipped-with-llm-afa773b9249e
+    - https://magazine.sebastianraschka.com/p/understanding-and-coding-self-attention 
 
 # 1 需要学习的零件
 transformer框架是大语言模型的基础，transformer以一些列的token作为输入，流经多层encoder、多层decoder以及一些适当的归一化和softmax后，输出下一个token。 
